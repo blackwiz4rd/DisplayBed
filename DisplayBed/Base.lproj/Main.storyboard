@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="12121" systemVersion="16G29" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="13771" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
         <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="12121"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="13771"/>
     </dependencies>
     <scenes>
         <!--Application-->
@@ -666,15 +666,18 @@
                                 <items>
                                     <menuItem title="HDMI" id="PJp-mD-nfO">
                                         <modifierMask key="keyEquivalentModifierMask"/>
-                                        <connections>
-                                            <action selector="goDark:" target="I9T-Um-twN" id="Qf8-7O-tgy"/>
-                                        </connections>
                                     </menuItem>
                                     <menuItem title="Built IN" keyEquivalent="V" id="3aR-WD-p1Q">
                                         <modifierMask key="keyEquivalentModifierMask"/>
                                     </menuItem>
                                 </items>
                             </menu>
+                        </menuItem>
+                        <menuItem title="LCD dim" id="OlV-Jl-xOT">
+                            <modifierMask key="keyEquivalentModifierMask"/>
+                            <connections>
+                                <action selector="goDark:" target="I9T-Um-twN" id="Mby-Eq-Lcg"/>
+                            </connections>
                         </menuItem>
                         <menuItem title="Save settings" id="VVY-HZ-PVs">
                             <modifierMask key="keyEquivalentModifierMask"/>

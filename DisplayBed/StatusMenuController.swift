@@ -86,8 +86,8 @@ class StatusMenuController: NSObject {
     }
     
     @IBAction func goDark(_ sender: Any) {
-        //setBrightness(level: 0.0)
-        display_sleep() //both screens go to sleep
+        setBrightness(level: 0.0)
+        //display_sleep() //both screens go to sleep
 
     }
     
@@ -354,6 +354,7 @@ class StatusMenuController: NSObject {
 
     }
     
+    //still not completed, doesn't work as it should
     func display_sleep(){
         usleep(1000*1000); // sleep 1000 ms
         
