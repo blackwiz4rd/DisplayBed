@@ -16,47 +16,51 @@ class StatusMenuController: NSObject {
     
     let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     
+    let DisableMonitorPath = "/Applications/DisableMonitor.app/Contents/MacOS/DisableMonitor"
+    let launchPath = "/bin/sh"
+    
     var CURRENT_IDS_DISABLED = [Int]()  //KEEPS TRACK OF WHAT YOU ARE DOING AFTER START
     var STORED_IDS_DISABLED = [Int]()   //SETTINGS STORED WHEN CLICKING ON SAVE SETTINGS
     
-    var mouseLocation: CGPoint = .zero
+    //var mouseLocation: CGPoint = .zero
     
     override func awakeFromNib() {
+        //Building the menu on the status bar
         buildMenu()
         
+        //Loading settings from last time it was opened
         loadSettings()
         
         //mouseMoving()
         
-        displays()
+        //displays()
         
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(StatusMenuController.sleepListener(_:)), name: NSWorkspace.willSleepNotification, object: nil)
         
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(StatusMenuController.sleepListener(_:)), name: NSWorkspace.didWakeNotification, object: nil)
-        
     }
 
     @IBAction func quitClicked(_ sender: NSMenuItem) {
-        print(numScreensConnected())
-        print(ids_index(IDS: CURRENT_IDS_DISABLED))
         NSApplication.shared.terminate(self)
     }
     
     @IBAction func screenEnableClicked(_ sender: NSMenuItem) {
         toggleSCREEN(ID: "--enable " + String(sender.tag))
         
-        for index in 0...ids_index(IDS: CURRENT_IDS_DISABLED){
-            if(sender.tag == CURRENT_IDS_DISABLED[index]){
-                CURRENT_IDS_DISABLED[index] = 0
+        if(CURRENT_IDS_DISABLED.count != 0){
+            for index in 0...CURRENT_IDS_DISABLED.count{
+                if(sender.tag == CURRENT_IDS_DISABLED[index]){
+                    CURRENT_IDS_DISABLED[index] = 0
+                }
             }
         }
     }
     
     @IBAction func screenDisableClicked(_ sender: NSMenuItem) {
-        if(numScreensConnected() > ids_index(IDS: CURRENT_IDS_DISABLED) + 1){
+        if(numScreensConnected() > CURRENT_IDS_DISABLED.count + 1){
             toggleSCREEN(ID: "--disable " + String(sender.tag))
             if !(IDExists(ID: sender.tag)){
-                CURRENT_IDS_DISABLED[ids_index(IDS: CURRENT_IDS_DISABLED)] = sender.tag
+                CURRENT_IDS_DISABLED.append(sender.tag)
             }
         }
         else{
@@ -73,33 +77,19 @@ class StatusMenuController: NSObject {
         let userDefaults = UserDefaults.standard
         
         STORED_IDS_DISABLED = [Int]()
-        for _ in 0...5{
-            STORED_IDS_DISABLED.append(0)
-        }
         
         // Save Settings
         userDefaults.set(STORED_IDS_DISABLED, forKey: "key")
         saveSettingsItem.isEnabled = true
         
         print("reset settings")
-        print(STORED_IDS_DISABLED)
     }
     
     @IBAction func goDark(_ sender: Any) {
         setBrightness(level: 0.0)
         //display_sleep() //both screens go to sleep
-
     }
     
-    private func setBrightness(level: Float) {
-        let service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IODisplayConnect"))
-        
-        IODisplaySetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, level)
-        IOObjectRelease(service)
-    }
-    
-    
-    //Custom functions
     @objc func sleepListener(_ aNotification : NSNotification) {
         if aNotification.name == NSWorkspace.willSleepNotification{
             print("Going to sleep")
@@ -108,11 +98,9 @@ class StatusMenuController: NSObject {
             print("Woke up")
             disableIDS(IDS: CURRENT_IDS_DISABLED)
         }
-        else{
-            print("Some other event other than the first two")
-        }
     }
     
+    //Custom functions
     func buildMenu(){
         print("building menu")
         statusItem.title = ""
@@ -150,8 +138,8 @@ class StatusMenuController: NSObject {
     
     func getList() -> [String] {
         let task = Process()
-        task.launchPath = "/bin/sh"
-        task.arguments = ["-c", "/Applications/DisableMonitor.app/Contents/MacOS/DisableMonitor --list"]
+        task.launchPath = launchPath
+        task.arguments = ["-c", DisableMonitorPath + " --list"]
         
         let pipe = Pipe()
         task.standardOutput = pipe
@@ -161,7 +149,6 @@ class StatusMenuController: NSObject {
         var list = [String]()
         
         if let output = NSString(data: data, encoding: String.Encoding.utf8.rawValue) {
-            //print(output)
             
             var lines: [String] = []
             output.enumerateLines { line, _ in
@@ -188,32 +175,38 @@ class StatusMenuController: NSObject {
         }
         
         task.waitUntilExit()
-        let status = task.terminationStatus
-        print("status of getList()")
-        print(status)
         return list
     }
     
+    //functions for screen IDS
+    //toggles screen on and off
     func toggleSCREEN(ID: String) {
         let task = Process()
-        task.launchPath = "/bin/sh"
-        task.arguments = ["-c", "/Applications/DisableMonitor.app/Contents/MacOS/DisableMonitor " + ID]
+        task.launchPath = launchPath
+        task.arguments = ["-c", DisableMonitorPath + " " + ID]
         
         let pipe = Pipe()
         task.standardOutput = pipe
         task.launch()
         
         task.waitUntilExit()
-        let status = task.terminationStatus
-        print("status of toggleScreen()")
-        print(status)
     }
     
+    //disables ids of given array
+    func disableIDS(IDS: [Int]){
+        if(numScreensConnected() > IDS.count + 1){
+            for index in 0...IDS.count{
+                toggleSCREEN(ID: "--disable " + String(IDS[index]))
+            }
+        }
+    }
+    
+    //counts the number of screens connected at the moment by using DisableMonitor
     func numScreensConnected() -> Int{
         var n = 0
         let task = Process()
-        task.launchPath = "/bin/sh"
-        task.arguments = ["-c", "/Applications/DisableMonitor.app/Contents/MacOS/DisableMonitor --list"]
+        task.launchPath = launchPath
+        task.arguments = ["-c", DisableMonitorPath + " --list"]
         
         let pipe = Pipe()
         task.standardOutput = pipe
@@ -228,13 +221,10 @@ class StatusMenuController: NSObject {
             }
         
             n = lines.count - 3
-            print("numScreensConnected" + String(n))
+            print("numScreensConnected: " + String(n))
         }
         
         task.waitUntilExit()
-        let status = task.terminationStatus
-        print("status of numScreensConnected()")
-        print(status)
         return n
     }
     
@@ -247,43 +237,21 @@ class StatusMenuController: NSObject {
         return false
     }
     
+    //Functions for settings
     func loadSettings(){
-        for _ in 0...5{
-            STORED_IDS_DISABLED.append(0)
-        }
-        
         let userDefaults = UserDefaults.standard
         
         if let userSettings = userDefaults.object(forKey: "key") {
             STORED_IDS_DISABLED = userSettings as! [Int]
             disableIDS(IDS: STORED_IDS_DISABLED)
             
-            print("loading settings") // prints "Some Setting"
+            print("loading settings")
             print(userSettings)
         }
         
         CURRENT_IDS_DISABLED = STORED_IDS_DISABLED
     }
     
-    func disableIDS(IDS: [Int]){
-        if(numScreensConnected() > ids_index(IDS: IDS) + 1){
-            for index in 0...ids_index(IDS: IDS){
-                toggleSCREEN(ID: "--disable " + String(IDS[index]))
-            }
-        }
-    }
-    
-    func ids_index(IDS: [Int]) -> Int{
-        var ids_index = 0
-        for index in 0...IDS.count - 1{
-            if !(IDS[index] == 0){
-                ids_index += 1
-            }
-        }
-        return ids_index
-    }
-    
-
     func saveSettings(){
         let userDefaults = UserDefaults.standard
         
@@ -292,7 +260,16 @@ class StatusMenuController: NSObject {
         print(CURRENT_IDS_DISABLED)
     }
     
-    /*func mouseMoving(){
+    private func setBrightness(level: Float) {
+        let service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IODisplayConnect"))
+        
+        IODisplaySetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, level)
+        IOObjectRelease(service)
+    }
+    
+    /*
+     //still not completed, doesn't work as it should
+     func mouseMoving(){
         
         
         
@@ -333,12 +310,13 @@ class StatusMenuController: NSObject {
                 print(String(format: "%.8f, %.8f", point.x, point.y))
                 CGWarpMouseCursorPosition(point)
                 
-                
+                //block form 1920x1080 to 1920x0
             }
         }
 
-    }*/
+    }
     
+    //still not completed, doesn't work as it should
     func displays(){
         let maxDisplays: UInt32 = 16
         //var onlineDisplays = [CGDirectDisplayID](repeating: 0, count: Int(maxDisplays))
@@ -350,8 +328,6 @@ class StatusMenuController: NSObject {
             print(onlineDisplays[Int(index)])
         }
         print(dErr)
-        
-
     }
     
     //still not completed, doesn't work as it should
@@ -377,7 +353,6 @@ class StatusMenuController: NSObject {
         
         let option = CGConfigureOption.permanently
         err = CGCompleteDisplayConfiguration(config[0], option)
-    }
+    }*/
     
-    //block form 1920x1080 to 1920x0
 }
